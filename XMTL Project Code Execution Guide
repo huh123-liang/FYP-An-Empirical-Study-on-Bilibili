@@ -1,0 +1,166 @@
+`ures_pipeline.py`
+
+**Expected Output:**
+
+- Multiple figures from the paper in PNG/SVG format
+
+**Output Location:**
+
+``` outputs/figures/
+
+├── architecture.png / .svg
+
+├── shap_importance.png / .svg
+
+├── ablation.png / .svg
+
+├── strategy_pipeline.png / .svg
+
+└── model_comparison.png / .svg
+
+```
+
+**Dependencies:** Recommended to run after stages six and seven to generate figures using real data.
+
+---
+
+## Stage Nine: Paper Compilation (Optional)
+
+**Purpose:** Compiles the LaTeX source files into PDF.
+
+**Run Command:**
+
+```bash
+pdflatex paper.tex
+bibtex paper
+pdflatex paper.tex
+pdflatex paper.tex
+```
+
+**Output Location:** `paper.pdf` (Already exists)
+
+**Can I skip this step?** `paper.pdf` already exists. If `paper.tex` has not been modified, you can skip this step.
+
+---
+
+## Beginner's Guide
+
+> Execute in sequence, proceeding to the next step only after completing each step.
+
+Step 1: `cd C:\Users\Lenovo\Desktop\myproject\LTF_code`
+
+Step 2: `pip install torch numpy pandas scikit-learn xgboost shap pyyaml ​​matplotlib scipy`
+
+(Only required for the first run)
+
+Step 3: `python -m src.preprocessing --config configs/default.yaml`
+
+Validate data + generate `splits_seed42.npz`
+
+→ Output: `data/processed/splits_seed42.npz`
+
+Step 4: `python -m experiments.run_baselines --config configs/default.yaml`
+
+Train 5 baseline models (time-consuming, can be verified first using `--smoke_test`)
+
+→ Output: `outputs/results/baselines/`
+
+Step 5: `python -m training.train --config configs/default.yaml`
+
+Train the XMTL main model (maximum) 100 epochs (with early termination)
+
+→ Output: outputs/results/xmtl_full/best_model.pth
+
+Step 6: python -m evaluation.evaluate --config configs/default.yaml
+
+Generate cross-model comparison table
+
+→ Output: outputs/results/comparison.csv
+
+Step 7: python -m experiments.ablation --config configs/default.yaml
+
+--xmtl_checkpoint outputs/results/xmtl_full/best_model.pth
+
+Ablation experiment
+
+→ Output: outputs/results/ablation/
+
+Step 8: python -m explainability.shap_analysis --config configs/default.yaml
+
+SHAP interpretability analysis
+
+→ Output: outputs/results/explainability/
+
+Step 9: python -m recommendation.strategy_generator --config configs/default.yaml
+
+Generate Content Creation Strategy
+
+→ Output: outputs/results/recommendations/strategies.json
+
+Step 10: python scripts/generate_figures.py
+
+Generate All Paper Figures
+
+→ Output: outputs/figures/
+
+Step 11: (Optional) pdflatex paper.tex && bibtex paper && pdflatex paper.tex && pdflatex paper.tex
+
+Compile Paper PDF
+
+→ Output: paper.pdf
+
+```
+
+---
+
+## Dependency Graph
+
+```
+Step 3 (Preprocessing)
+
+└─→ Step 4 (Baseline Training)
+
+└─→ Step 6 (Evaluation)
+
+└─→ Step 7 (Ablation Experiment)
+
+└─→ Step 8 (SHAP Analysis)
+
+└─→ Step 9 (Strategy Generation)
+
+└─→ Step 10 (Figure Generation)
+
+└─→ Step 5 (XMTL Training)
+
+└─→ Step 6 (Evaluation, optional checkpoint mode)
+
+└─→ Step 7 (Ablation Experiment, optional XMTL ablation)
+
+```
+
+---
+
+## Frequently Asked Questions
+
+**Q: What if training is too slow?**
+
+- Baseline: Add `--smoke_test` to quickly validate with 5000 samples.
+
+- XMTL: The early stopping mechanism will automatically stop after the validation set stops increasing for 25 epochs.
+
+- It will automatically use GPUs (`device: auto`).
+
+**Q: What if there is insufficient memory?**
+
+- `content_features.npy` is 3.4GB and requires at least 8GB of memory.
+
+- You can reduce `batch_size` in `configs/default.yaml`.
+
+**Q: Windows path issues?** **
+- All scripts use relative paths and must be run in the `LTF_code/` directory.
+
+- `num_workers: 0` is already set for Windows compatibility.
+
+**Q: The result already exists; I want to rerun a specific step?**
+
+- Running the corresponding command directly will overwrite the output file.
